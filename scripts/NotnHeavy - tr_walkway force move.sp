@@ -15,6 +15,7 @@
 //////////////////////////////////////////////////////////////////////////////
 
 static ConVar notnheavy_tr_walkway_speed;
+static ConVar notnheavy_tr_walkway_move_nottrack;
 
 //////////////////////////////////////////////////////////////////////////////
 // PLUGIN INFO                                                              //
@@ -25,7 +26,7 @@ public Plugin myinfo =
     name = PLUGIN_NAME,
     author = "NotnHeavy",
     description = "Makes the bots move forward without any hacky velocity stuff.",
-    version = "1.0",
+    version = "1.1",
     url = "none"
 };
 
@@ -36,6 +37,7 @@ public Plugin myinfo =
 public void OnPluginStart()
 {
     notnheavy_tr_walkway_speed = CreateConVar("notnheavy_tr_walkway_speed", "300.00", "The speed of the bots.", FCVAR_SPONLY);
+    notnheavy_tr_walkway_move_nottrack = CreateConVar("notnheavy_tr_walkway_move_nottrack", "1", "Toggles whether bots should still move regardless if they're touching the track.", FCVAR_SPONLY);
 
     LoadTranslations("common.phrases");
     PrintToServer("--------------------------------------------------------\n\"%s\" has loaded.\n--------------------------------------------------------", PLUGIN_NAME);
@@ -51,12 +53,24 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
     {
         float origin[3];
         GetEntPropVector(client, Prop_Data, "m_vecAbsOrigin", origin);
-        if (origin[0] < 1000.00)
+        if (origin[0] > 1000.00)
+            return Plugin_Continue;
+        
+        if (!notnheavy_tr_walkway_move_nottrack.BoolValue)
         {
-            float speed = notnheavy_tr_walkway_speed.FloatValue;
-            SetEntPropFloat(client, Prop_Send, "m_flMaxspeed", speed);
-            vel[0] = speed;
+            int entity = GetEntPropEnt(client, Prop_Send, "m_hGroundEntity");
+            if (!IsValidEntity(entity))
+                return Plugin_Continue;
+
+            char buffer[64];
+            GetEntityClassname(entity, buffer, sizeof(buffer));
+            if (strcmp(buffer, "func_conveyor") != 0)
+                return Plugin_Continue;
         }
+
+        float speed = notnheavy_tr_walkway_speed.FloatValue;
+        SetEntPropFloat(client, Prop_Send, "m_flMaxspeed", speed);
+        vel[0] = speed;
         return Plugin_Changed;
     }
     return Plugin_Continue;
